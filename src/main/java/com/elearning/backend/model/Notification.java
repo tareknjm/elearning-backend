@@ -1,5 +1,6 @@
 package com.elearning.backend.model;
 
+
 import jakarta.persistence.*;
 import lombok.*;
 import java.time.LocalDateTime;
@@ -22,6 +23,7 @@ public class Notification {
 
     private String title;
 
+
     @Column(columnDefinition = "TEXT")
     private String message;
 
@@ -29,7 +31,7 @@ public class Notification {
     private Boolean isRead;
 
     private String type;
-
+    private String link;
     private LocalDateTime createdAt;
 
     @PrePersist
@@ -37,4 +39,9 @@ public class Notification {
         this.createdAt = LocalDateTime.now();
         this.isRead = false;
     }
+    @Column(nullable = false)
+    @Builder.Default
+    private boolean archived = false;
+
+    private LocalDateTime archivedAt;
 }

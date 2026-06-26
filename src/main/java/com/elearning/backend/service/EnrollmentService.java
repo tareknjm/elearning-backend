@@ -33,6 +33,14 @@ public class EnrollmentService {
             throw new RuntimeException("Vous etes deja inscrit a cette formation");
         }
 
+        final int FREE_ENROLLMENT_LIMIT = 3;
+        if (!user.isPremium()) {
+            long currentCount = enrollmentRepository.findByUser(user).size();
+            if (currentCount >= FREE_ENROLLMENT_LIMIT) {
+                throw new RuntimeException("LIMIT_REACHED");
+            }
+        }
+
         Enrollment enrollment = Enrollment.builder()
                 .user(user)
                 .course(course)
@@ -40,14 +48,14 @@ public class EnrollmentService {
 
         enrollmentRepository.save(enrollment);
 
-        // Notifier l'instructeur
         if (course.getInstructor() != null) {
             notificationService.send(
                     course.getInstructor(),
                     "Nouvel inscrit !",
                     user.getName() + " s'est inscrit à votre formation \""
                             + course.getTitle() + "\"",
-                    "ENROLLMENT"
+                    "ENROLLMENT",
+                    "/instructor/analytics"
             );
         }
 

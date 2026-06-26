@@ -118,4 +118,21 @@ public class QuizService {
                         .existsByUserAndQuizAndPassedTrue(user, quiz))
                 .orElse(false);
     }
+    @Transactional
+    public int getLastScore(Long courseId, String userEmail) {
+        User user = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new RuntimeException("Utilisateur introuvable"));
+
+        Course course = courseRepository.findById(courseId)
+                .orElseThrow(() -> new RuntimeException("Formation introuvable"));
+
+        return quizRepository.findByCourse(course)
+                .map(quiz -> quizResultRepository
+                        .findTopByUserAndQuizOrderByIdDesc(user, quiz)
+                        .map(result -> result.getTotalQuestions() > 0
+                                ? (result.getScore() * 100) / result.getTotalQuestions()
+                                : 0)
+                        .orElse(0))
+                .orElse(0);
+    }
 }

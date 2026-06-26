@@ -2,6 +2,7 @@ package com.elearning.backend.dto;
 
 import jakarta.validation.constraints.*;
 import lombok.Data;
+import org.springframework.web.multipart.MultipartFile;
 
 @Data
 public class InstructorApplicationRequest {
@@ -29,4 +30,6 @@ public class InstructorApplicationRequest {
 
     @NotBlank
     private String educationLevel;
+
+    private MultipartFile motivationFile;
 }

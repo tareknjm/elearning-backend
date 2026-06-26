@@ -7,6 +7,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Map;
+
 @RestController
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor
@@ -22,5 +24,19 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request) {
         return ResponseEntity.ok(authService.login(request));
+    }
+    @PostMapping("/forgot-password")
+    public ResponseEntity<Void> forgotPassword(@RequestBody Map<String, String> body) {
+        authService.forgotPassword(body.get("email"));
+        return ResponseEntity.ok().build();
+    }
+    @PostMapping("/change-password")
+    public ResponseEntity<Void> changePassword(@RequestBody Map<String, String> body) {
+        authService.changePassword(
+                body.get("email"),
+                body.get("tempPassword"),
+                body.get("newPassword")
+        );
+        return ResponseEntity.ok().build();
     }
 }

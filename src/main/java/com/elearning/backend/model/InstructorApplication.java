@@ -22,6 +22,8 @@ public class InstructorApplication {
     private String speciality;
     private String experience;
 
+
+
     @Column(columnDefinition = "TEXT")
     private String motivation;
 
@@ -34,7 +36,7 @@ public class InstructorApplication {
     private Status status;
 
     public enum Status {
-        PENDING, APPROVED, REJECTED
+        PENDING, INTERVIEW_SCHEDULED, APPROVED, REJECTED, ARCHIVED
     }
 
     @Column(columnDefinition = "TEXT")
@@ -42,6 +44,16 @@ public class InstructorApplication {
 
     private LocalDateTime appliedAt;
     private LocalDateTime reviewedAt;
+
+    private LocalDateTime interviewScheduledAt;
+    private String meetingRoom;
+    private String motivationFilePath;
+
+    @Column(nullable = false)
+    @Builder.Default
+    private boolean archived = false;
+
+    private LocalDateTime archivedAt;
 
     @PrePersist
     public void prePersist() {

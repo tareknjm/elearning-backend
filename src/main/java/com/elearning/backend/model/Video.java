@@ -23,7 +23,20 @@ public class Video {
 
     private Integer orderIndex;
 
+    @Enumerated(EnumType.STRING)
+    @Builder.Default
+    private VideoStatus status = VideoStatus.PENDING;
+
     @ManyToOne
     @JoinColumn(name = "course_id", nullable = false)
     private Course course;
+
+    public enum VideoStatus {
+        PENDING, APPROVED, REJECTED
+    }
+    @Column(nullable = false)
+    @Builder.Default
+    private boolean archived = false;
+
+    private java.time.LocalDateTime archivedAt;
 }

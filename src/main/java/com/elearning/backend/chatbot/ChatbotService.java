@@ -23,6 +23,7 @@ public class ChatbotService {
     private final CourseRepository courseRepository;
     private final ChatMessageRepository chatMessageRepository;
     private final UserRepository userRepository;
+    private final GroqChatClient groqChatClient;
 
     // Mots-clés → catégories/sujets
     private static final Map<String, List<String>> KEYWORDS = new HashMap<>();
@@ -42,13 +43,10 @@ public class ChatbotService {
         String message = request.getMessage().toLowerCase().trim();
         List<Course> allApproved = courseRepository.findByStatus(Course.Status.APPROVED);
 
-        // Trouver les cours correspondants
         List<Course> matched = findMatchingCourses(message, allApproved);
 
-        // Générer la réponse textuelle
-        String reply = generateReply(message, matched);
+        String reply = generateAiReply(request.getMessage(), matched);
 
-        // Sauvegarder dans l'historique si connecté
         if (authentication != null) {
             saveMessage(message, reply, authentication.getName());
         }
@@ -61,6 +59,32 @@ public class ChatbotService {
         return new ChatResponse(reply, recommendations);
     }
 
+    private String generateAiReply(String userMessage, List<Course> matched) {
+        String coursesContext = matched.isEmpty()
+                ? "Aucune formation ne correspond exactement a cette demande dans le catalogue."
+                : matched.stream()
+                .limit(4)
+                .map(c -> "- " + c.getTitle() + ": " + c.getDescription())
+                .collect(Collectors.joining("\n"));
+
+        String systemPrompt = """
+                Tu es l'assistant conversationnel d'une plateforme e-learning.
+                Reponds toujours en francais, de facon breve (2 a 4 phrases), chaleureuse et naturelle.
+                Si des formations pertinentes existent dans le contexte ci-dessous, mentionne-les.
+                Sinon, propose a l'utilisateur de preciser sa demande (ex: Java, Python, Web, Mobile, SQL, Docker...).
+
+                Formations trouvees dans le catalogue:
+                %s
+                """.formatted(coursesContext);
+
+        try {
+            return groqChatClient.ask(systemPrompt, userMessage);
+        } catch (Exception e) {
+            System.err.println("Erreur appel Groq, fallback sur reponse basique: " + e.getMessage());
+            return generateReply(userMessage.toLowerCase(), matched);
+        }
+    }
+
     private List<Course> findMatchingCourses(String message, List<Course> courses) {
         List<Course> matched = new ArrayList<>();
 
@@ -70,7 +94,6 @@ public class ChatbotService {
                     (course.getCategory() != null ? course.getCategory().getName() : ""))
                     .toLowerCase();
 
-            // Vérifier correspondance directe avec le titre/description
             String[] words = message.split("\\s+");
             for (String word : words) {
                 if (word.length() > 2 && courseText.contains(word)) {
@@ -80,7 +103,6 @@ public class ChatbotService {
                 }
             }
 
-            // Vérifier correspondance avec les mots-clés
             for (Map.Entry<String, List<String>> entry : KEYWORDS.entrySet()) {
                 for (String keyword : entry.getValue()) {
                     if (message.contains(keyword) && courseText.contains(keyword)) {
@@ -96,27 +118,22 @@ public class ChatbotService {
     }
 
     private String generateReply(String message, List<Course> matched) {
-        // Salutations
         if (message.matches(".*(bonjour|salut|hello|bonsoir|hi).*")) {
             return "Bonjour ! 👋 Je suis votre assistant E-Learning. Dites-moi ce que vous souhaitez apprendre et je vous recommanderai les meilleures formations !";
         }
 
-        // Aide
         if (message.matches(".*(aide|help|comment|quoi).*")) {
             return "Je peux vous aider à trouver des formations ! Dites-moi simplement ce que vous voulez apprendre. Par exemple : \"Je veux apprendre Java\", \"formations en Python\", \"développement web\"...";
         }
 
-        // Merci
         if (message.matches(".*(merci|thank|super|parfait|excellent).*")) {
             return "Avec plaisir ! 😊 N'hésitez pas si vous avez d'autres questions ou si vous cherchez d'autres formations.";
         }
 
-        // Résultats trouvés
         if (!matched.isEmpty()) {
             return "J'ai trouvé " + matched.size() + " formation(s) qui correspond(ent) à votre recherche ! 🎯 Voici mes recommandations :";
         }
 
-        // Aucun résultat
         return "Je n'ai pas trouvé de formation correspondant exactement à \"" + message + "\". 🤔 Essayez avec d'autres mots-clés comme : Java, Python, Web, Mobile, SQL, Docker...";
     }
 

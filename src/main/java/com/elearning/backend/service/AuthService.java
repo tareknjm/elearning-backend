@@ -8,6 +8,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.*;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import java.security.SecureRandom;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 @Service
 @RequiredArgsConstructor
@@ -17,6 +20,7 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
     private final AuthenticationManager authenticationManager;
+    private final EmailService emailService;
 
     public AuthResponse register(RegisterRequest request) {
         if (userRepository.existsByEmail(request.getEmail())) {
@@ -49,7 +53,9 @@ public class AuthService {
         String token = jwtUtil.generateToken(
                 user.getEmail(), user.getRole().name());
         return new AuthResponse(
-                token, user.getRole().name(), user.getName(), user.getId());
+                token, user.getRole().name(), user.getName(), user.getId(),
+                user.getPlan().name(), user.getPlanExpiresAt()
+        );
     }
 
     public AuthResponse login(LoginRequest request) {
@@ -68,6 +74,40 @@ public class AuthService {
                 .orElseThrow(() -> new RuntimeException("Utilisateur introuvable"));
 
         String token = jwtUtil.generateToken(user.getEmail(), user.getRole().name());
-        return new AuthResponse(token, user.getRole().name(), user.getName(), user.getId());
+        return new AuthResponse(
+                token, user.getRole().name(), user.getName(), user.getId(),
+                user.getPlan().name(), user.getPlanExpiresAt()
+        );
+    }
+    public void forgotPassword(String email) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("Aucun compte associé à cet email"));
+
+        // Génère un mot de passe temporaire lisible (12 chars)
+        String chars = "ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#";
+        SecureRandom random = new SecureRandom();
+        String newPassword = IntStream.range(0, 12)
+                .mapToObj(i -> String.valueOf(chars.charAt(random.nextInt(chars.length()))))
+                .collect(Collectors.joining());
+
+        // Hash et sauvegarde
+        user.setPassword(passwordEncoder.encode(newPassword));
+        userRepository.save(user);
+
+        // Envoie l'email
+        emailService.sendPasswordResetEmail(email, user.getName(), newPassword);
+    }
+    public void changePassword(String email, String tempPassword, String newPassword) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("Utilisateur introuvable"));
+
+        // Vérifie que le mot de passe temporaire est correct
+        if (!passwordEncoder.matches(tempPassword, user.getPassword())) {
+            throw new RuntimeException("Mot de passe temporaire incorrect");
+        }
+
+        // Sauvegarde le nouveau
+        user.setPassword(passwordEncoder.encode(newPassword));
+        userRepository.save(user);
     }
 }

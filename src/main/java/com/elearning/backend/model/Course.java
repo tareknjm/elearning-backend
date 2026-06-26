@@ -21,6 +21,15 @@ public class Course {
     @Column(columnDefinition = "TEXT")
     private String description;
 
+    @Column(name = "image_url")
+    private String imageUrl;
+
+    @Column(nullable = false)
+    @Builder.Default
+    private boolean archived = false;
+
+    private java.time.LocalDateTime archivedAt;
+
     private String level;
 
     @Enumerated(EnumType.STRING)

@@ -11,6 +11,7 @@ public class CourseResponse {
     private String description;
     private String level;
     private String status;
+    private String imageUrl;
     private String instructorName;
     private Long instructorId;
     private String categoryName;
@@ -25,6 +26,7 @@ public class CourseResponse {
         response.setDescription(course.getDescription());
         response.setLevel(course.getLevel());
         response.setStatus(course.getStatus().name());
+        response.setImageUrl(course.getImageUrl());
         response.setInstructorName(course.getInstructor() != null
                 ? course.getInstructor().getName() : "Inconnu");
         response.setInstructorId(course.getInstructor() != null
